@@ -1,6 +1,6 @@
 // App.tsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeModeProvider } from './contexts/ThemeContext';
@@ -66,7 +66,7 @@ function App() {
         <AuthProvider>
           <Router>
             <Routes>
-            <Route path="/" element={<GuestRoute><LoginPage /></GuestRoute>} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
             
             <Route path="/user-dashboard" element={
