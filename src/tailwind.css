@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * shadcn/ui theme variables, mapped to MURI's real colors (not shadcn's defaults):
+ * primary = #0C5494 (MURI Blue), sidebar = the navy gradient (#2c3e50 -> #1a252f)
+ * already used by the shared UnifiedSidebar component.
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 210 29% 24%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 29% 24%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 29% 24%;
+
+    --primary: 208 85% 31%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 210 29% 24%;
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 210 9% 55%;
+
+    --accent: 210 20% 93%;
+    --accent-foreground: 210 29% 24%;
+
+    --destructive: 6 78% 57%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 16% 88%;
+    --input: 210 16% 88%;
+    --ring: 208 85% 31%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar always uses the dark navy look, same in light and dark mode */
+    --sidebar-background: 210 29% 24%;
+    --sidebar-foreground: 210 15% 92%;
+    --sidebar-primary: 208 85% 31%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 25% 30%;
+    --sidebar-accent-foreground: 210 15% 96%;
+    --sidebar-border: 210 20% 30%;
+    --sidebar-ring: 208 85% 31%;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 20% 92%;
+
+    --card: 217 33% 12%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 217 33% 12%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 208 75% 55%;
+    --primary-foreground: 222 47% 8%;
+
+    --secondary: 217 25% 18%;
+    --secondary-foreground: 210 20% 92%;
+
+    --muted: 217 25% 18%;
+    --muted-foreground: 215 15% 65%;
+
+    --accent: 217 25% 20%;
+    --accent-foreground: 210 20% 92%;
+
+    --destructive: 6 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 25% 20%;
+    --input: 217 25% 20%;
+    --ring: 208 75% 55%;
+
+    --sidebar-background: 210 29% 24%;
+    --sidebar-foreground: 210 15% 92%;
+    --sidebar-primary: 208 85% 31%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 25% 30%;
+    --sidebar-accent-foreground: 210 15% 96%;
+    --sidebar-border: 210 20% 30%;
+    --sidebar-ring: 208 85% 31%;
+  }
+}

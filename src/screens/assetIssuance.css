@@ -1,0 +1,439 @@
+.asset-issuance-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fa;
+  color: #172033;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.asset-issuance-page .main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 30px 36px;
+  background: #f5f7fa;
+}
+
+.issuance-content {
+  width: 100%;
+  max-width: 1540px;
+  margin: 0 auto;
+  padding: 36px 0 0;
+}
+
+.issuance-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 34px;
+}
+
+.issuance-header h1 {
+  margin: 0 0 8px;
+  color: #172033;
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+.issuance-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.issuance-primary-btn,
+.issuance-secondary-btn,
+.issuance-return-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.issuance-primary-btn {
+  border: 1px solid #0C5494;
+  background: #0C5494;
+  color: #ffffff;
+  padding: 12px 18px;
+  font-size: 14px;
+  box-shadow: 0 8px 18px rgba(12, 84, 148, 0.18);
+}
+
+.issuance-primary-btn:hover {
+  background: #0a4278;
+  border-color: #0a4278;
+  transform: translateY(-1px);
+}
+
+.issuance-secondary-btn {
+  border: 1px solid transparent;
+  background: #eef2f7;
+  color: #475569;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.issuance-secondary-btn:hover {
+  background: #e2e8f0;
+  color: #172033;
+}
+
+.issuance-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 18px;
+  margin-bottom: 30px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e1e7ef;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.issuance-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.issuance-field input,
+.issuance-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 14px;
+}
+
+.issuance-field input:focus,
+.issuance-field select:focus {
+  outline: none;
+  border-color: #0C5494;
+  box-shadow: 0 0 0 3px rgba(12, 84, 148, 0.12);
+}
+
+.issuance-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.issuance-table-card {
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e1e7ef;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.issuance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.issuance-table th {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+  text-align: left;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e1e7ef;
+}
+
+.issuance-table td {
+  padding: 18px 20px;
+  color: #475569;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.issuance-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.issuance-asset-name {
+  color: #172033 !important;
+  font-weight: 700;
+}
+
+.issuance-table-action {
+  text-align: right !important;
+}
+
+.issuance-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.issuance-status-issued,
+.issuance-status-returned {
+  background: #e8f4fc;
+  color: #0C5494;
+}
+
+.issuance-return-btn {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.issuance-return-btn:hover {
+  border-color: #0C5494;
+  color: #0C5494;
+  background: #f5f9fc;
+}
+
+.issuance-empty {
+  padding: 42px 20px !important;
+  text-align: center;
+  color: #94a3b8 !important;
+}
+
+.issuance-header-actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.issuance-inline-error {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #ffe6e6;
+  color: #cc0000;
+  border: 1px solid #ffcccc;
+  font-size: 14px;
+}
+
+.issuance-form-error {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+
+.issuance-field input:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.issuance-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.issuance-search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #94a3b8;
+}
+
+.issuance-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #172033;
+  font: inherit;
+  font-size: 14px;
+}
+
+.issuance-filter-select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 14px;
+}
+
+.issuance-row:hover {
+  background: #f8fafc;
+}
+
+.issuance-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  padding: 8px 12px;
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.issuance-view-btn:hover {
+  border-color: #0C5494;
+  color: #0C5494;
+  background: #f5f9fc;
+}
+
+.issuance-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.issuance-details-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.issuance-details-grid span {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #94a3b8;
+}
+
+.issuance-details-grid strong {
+  color: #172033;
+  font-size: 15px;
+}
+
+body.asm-dark .asset-issuance-page,
+body.asm-dark .asset-issuance-page .main-content {
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+body.asm-dark .issuance-form,
+body.asm-dark .issuance-table-card {
+  background: #111827;
+  border-color: #0F172A;
+}
+
+body.asm-dark .issuance-header h1,
+body.asm-dark .issuance-asset-name,
+body.asm-dark .issuance-table th {
+  color: #e5e7eb !important;
+}
+
+body.asm-dark .issuance-header p,
+body.asm-dark .issuance-table td,
+body.asm-dark .issuance-field label {
+  color: #9ca3af;
+}
+
+body.asm-dark .issuance-table th {
+  background: #0F172A;
+  border-color: #1f2937;
+}
+
+body.asm-dark .issuance-field input,
+body.asm-dark .issuance-field select {
+  background: #0F172A;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.asm-dark .issuance-field input:disabled {
+  background: #1f2937;
+  color: #9ca3af;
+}
+
+body.asm-dark .issuance-search,
+body.asm-dark .issuance-filter-select {
+  background: #0F172A;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.asm-dark .issuance-search input {
+  color: #e5e7eb;
+}
+
+body.asm-dark .issuance-row:hover {
+  background: #0F172A;
+}
+
+body.asm-dark .issuance-view-btn {
+  background: #0F172A;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.asm-dark .issuance-details-grid strong {
+  color: #e5e7eb;
+}
+
+@media (max-width: 992px) {
+  .asset-issuance-page .main-content {
+    padding: 24px;
+  }
+
+  .issuance-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .issuance-header,
+  .issuance-form-actions,
+  .issuance-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .issuance-header-actions {
+    flex-direction: column;
+  }
+
+  .issuance-primary-btn,
+  .issuance-secondary-btn {
+    width: 100%;
+  }
+
+  .issuance-table-card {
+    overflow-x: auto;
+  }
+
+  .issuance-table {
+    min-width: 960px;
+  }
+
+  .issuance-details-grid {
+    grid-template-columns: 1fr;
+  }
+}

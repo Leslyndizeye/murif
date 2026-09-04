@@ -1,0 +1,230 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  font-size: 87.5%;
+  scrollbar-gutter: stable;
+  --muri-sky: #F2FCFF;
+  --muri-mist: #BFEFFF;
+  --muri-aqua: #79D4E6;
+  --muri-teal: #2FA6B4;
+  --muri-deep: #1E4D57;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Defer rendering for off-screen content cards without affecting navigation. */
+:where([class*='card'], [class$='card'], [class*='Card'], [class$='Card']) {
+  content-visibility: auto;
+  contain-intrinsic-size: 240px;
+}
+
+:where(.muri-topnav, .unified-sidebar, .muri-topnav *, .unified-sidebar *) {
+  content-visibility: visible;
+  contain-intrinsic-size: auto;
+}
+
+select {
+  min-height: 40px;
+  padding: 9px 32px 9px 11px;
+  border: 1px solid #b8c7d9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #243447;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border-color: #0C5494;
+  box-shadow: 0 0 0 3px rgba(12, 84, 148, 0.12);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  background: linear-gradient(135deg, var(--muri-sky) 0%, var(--muri-mist) 100%);
+  color: #0f172a;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--muri-teal) 0%, var(--muri-deep) 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #1c8b97 0%, #14353c 100%);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Shared app theme */
+body.asm-dark {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+body.asm-dark .voucher-container,
+body.asm-dark .setting-container,
+body.asm-dark .chatbot-container,
+body.asm-dark .report-container {
+  background: #0f172a;
+}
+
+body.asm-dark .simple-dashboard-root,
+body.asm-dark .dashboard-container {
+  background: #0f172a;
+}
+
+body.asm-dark .voucher-main,
+body.asm-dark .setting-main,
+body.asm-dark .chatbot-container .main-content,
+body.asm-dark .report-container .main-content {
+  background: #0f172a;
+}
+
+body.asm-dark .voucher-header,
+body.asm-dark .setting-header,
+body.asm-dark .chatbot-container .top-bar,
+body.asm-dark .report-container .top-bar,
+body.asm-dark .voucher-form-container,
+body.asm-dark .voucher-ticket-card,
+body.asm-dark .voucher-requester-card,
+body.asm-dark .voucher-tabs,
+body.asm-dark .setting-section,
+body.asm-dark .chatbot-container .faq-section,
+body.asm-dark .chatbot-container .chat-section,
+body.asm-dark .report-container .filter-bar,
+body.asm-dark .report-container .stat-card,
+body.asm-dark .report-container .chart-card,
+body.asm-dark .report-container .activity-section,
+body.asm-dark .report-container .activity-table-wrapper,
+body.asm-dark .report-container .footer {
+  background: #111827;
+  border-color: #0F172A;
+  color: #e5e7eb;
+}
+
+body.asm-dark .voucher-form-group input,
+body.asm-dark .voucher-form-group select,
+body.asm-dark .voucher-form-group textarea,
+body.asm-dark .voucher-ticket-select,
+body.asm-dark .voucher-ticket-textarea,
+body.asm-dark .voucher-search-input,
+body.asm-dark .form-input,
+body.asm-dark .chatbot-container .chat-input,
+body.asm-dark .report-container .filter-select,
+body.asm-dark .report-container .icon-btn,
+body.asm-dark .chatbot-container .icon-btn,
+body.asm-dark .voucher-icon-btn {
+  background: #0F172A;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.asm-dark .voucher-form-container h2,
+body.asm-dark .section-title,
+body.asm-dark .setting-title,
+body.asm-dark .chatbot-container .page-title,
+body.asm-dark .chatbot-container .faq-issue,
+body.asm-dark .chatbot-container .empty-chat-text,
+body.asm-dark .report-container .page-title,
+body.asm-dark .report-container .chart-title,
+body.asm-dark .report-container .activity-title,
+body.asm-dark .report-container .stat-value,
+body.asm-dark .voucher-ticket-card h4,
+body.asm-dark .voucher-ticket-label,
+body.asm-dark .voucher-status-badge,
+body.asm-dark .ticket-priority-badge {
+  color: #e5e7eb;
+}
+
+body.asm-dark .voucher-form-container > p,
+body.asm-dark .form-label,
+body.asm-dark .password-hint,
+body.asm-dark .user-email,
+body.asm-dark .chatbot-container .faq-solution,
+body.asm-dark .chatbot-container .empty-chat-subtitle,
+body.asm-dark .chatbot-container .message-bubble-bot,
+body.asm-dark .voucher-ticket-card p,
+body.asm-dark .report-container .chart-subtitle,
+body.asm-dark .report-container .stat-label,
+body.asm-dark .report-container .stat-trend,
+body.asm-dark .report-container .bar-label,
+body.asm-dark .report-container .activity-table td span {
+  color: #9ca3af;
+}
+
+body.asm-dark .voucher-ticket-card,
+body.asm-dark .chatbot-container .faq-item,
+body.asm-dark .chatbot-container .chat-input-form,
+body.asm-dark .chatbot-container .message-bubble-bot,
+body.asm-dark .assigned-devices-table th,
+body.asm-dark .assigned-devices-table tr:hover,
+body.asm-dark .add-device-form,
+body.asm-dark .chat-suggestion,
+body.asm-dark .appointment-card {
+  background: #111827;
+  border-color: #0F172A;
+}
+
+body.asm-dark .assigned-devices-table td,
+body.asm-dark .assigned-devices-table th,
+body.asm-dark .report-container .activity-table td,
+body.asm-dark .report-container .activity-table th,
+body.asm-dark .voucher-container .voucher-footer,
+body.asm-dark .chatbot-container .footer p {
+  color: #e5e7eb;
+  border-color: #0F172A;
+}

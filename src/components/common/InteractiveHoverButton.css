@@ -1,0 +1,70 @@
+.muri-hover-btn {
+  position: relative;
+  overflow: hidden;
+  width: 140px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid #0C5494;
+  background: #ffffff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.muri-hover-btn-label {
+  display: inline-block;
+  transform: translateX(4px);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.muri-hover-btn:hover .muri-hover-btn-label {
+  transform: translateX(48px);
+  opacity: 0;
+}
+
+.muri-hover-btn-label-hover {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #ffffff;
+  transform: translateX(48px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.muri-hover-btn:hover .muri-hover-btn-label-hover {
+  transform: translateX(-4px);
+  opacity: 1;
+}
+
+.muri-hover-btn-circle {
+  position: absolute;
+  left: 20%;
+  top: 40%;
+  height: 8px;
+  width: 8px;
+  border-radius: 8px;
+  background: #0C5494;
+  transform: scale(1);
+  transition: all 0.3s ease;
+}
+
+.muri-hover-btn:hover .muri-hover-btn-circle {
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  transform: scale(1.8);
+  border-radius: 999px;
+}
+
+.dark .muri-hover-btn {
+  background: #1a252f;
+  border-color: #0C5494;
+  color: #ecf0f1;
+}

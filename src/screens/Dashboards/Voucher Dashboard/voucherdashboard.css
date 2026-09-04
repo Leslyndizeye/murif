@@ -1,0 +1,11 @@
+/* Voucher Dashboard: same blue accent as the shared dashboard styling. */
+
+.voucher-dashboard {
+  --success: #0C5494;
+  --success-light: #e8f4fc;
+}
+
+.voucher-dashboard .simple-action-icon {
+  background: #e8f4fc;
+  color: #0C5494;
+}
