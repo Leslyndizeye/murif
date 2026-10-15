@@ -5,20 +5,157 @@ import { assetAPI, usersAPI } from '../services/api';
 
 jest.mock('../components/layout/UnifiedSidebar', () => () => null);
 jest.mock('../components/layout/TopNavbar', () => () => null);
-jest.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ user: { role: 'IT' } }) }));
+let mockRole = 'IT';
+jest.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ user: { role: mockRole } }) }));
 jest.mock('../components/ui/button-utility', () => ({ ButtonUtility: ({ tooltip, onClick }) => <button aria-label={tooltip} onClick={onClick}>{tooltip}</button> }));
 jest.mock('../services/api', () => ({
-  usersAPI: { listUsers: jest.fn() },
-  assetAPI: { list: jest.fn(), update: jest.fn(), create: jest.fn() },
+  usersAPI: { listUsers: jest.fn(), createUser: jest.fn(), deleteUser: jest.fn() },
+  assetAPI: { list: jest.fn(), update: jest.fn(), create: jest.fn(), remove: jest.fn() },
 }));
 
 const device = { id: 7, name: 'Dell', category: 'Desktop', serial_number: 'DELL-7', status: 'Available' };
 const secondDevice = { id: 8, name: 'HP', category: 'Laptop', serial_number: 'HP-8', status: 'Available' };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
+  mockRole = 'IT';
   assetAPI.list.mockResolvedValue([device, secondDevice]);
   usersAPI.listUsers.mockResolvedValue([]);
+});
+
+const employee = { id: 42, full_name: 'Vanessa', username: 'vanessa', email: 'vanessa@icttoolsasm.com', department: 'Finance', role: 'USER', is_active: true };
+
+const openNewUser = async () => {
+  const view = render(<DataAssets />);
+  await waitFor(() => expect(usersAPI.listUsers).toHaveBeenCalled());
+  fireEvent.click(screen.getByRole('button', { name: 'Add New' }));
+  fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: ' Vanessa ' } });
+  fireEvent.change(screen.getByLabelText('Username (optional)'), { target: { value: ' vanessa ' } });
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'VANESSA@icttoolsasm.com' } });
+  fireEvent.change(screen.getByLabelText('Department'), { target: { value: ' Finance ' } });
+  return view;
+};
+
+test('creates the user on the backend and loads the persisted record after remount', async () => {
+  let storedUsers = [];
+  usersAPI.listUsers.mockImplementation(async () => storedUsers);
+  usersAPI.createUser.mockImplementation(async () => {
+    storedUsers = [employee];
+    return { message: 'User created successfully. Login details were emailed to them.' };
+  });
+  const view = await openNewUser();
+  fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
+  expect(await screen.findByText('Vanessa')).toBeTruthy();
+  expect(usersAPI.createUser).toHaveBeenCalledWith({ full_name: 'Vanessa', username: 'vanessa', email: 'vanessa@icttoolsasm.com', department: 'Finance', role: 'USER' });
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(screen.getByRole('status').textContent).toContain('Login details were emailed');
+  view.unmount();
+  render(<DataAssets />);
+  expect(await screen.findByText('Vanessa')).toBeTruthy();
+});
+
+test.each([
+  ['Use organization email'],
+  ['Email already registered'],
+  ['Email delivery failed'],
+  [[{ loc: ['body', 'email'], msg: 'Invalid email' }]],
+])('keeps rejected user saves visible with a readable error: %s', async (detail) => {
+  usersAPI.createUser.mockRejectedValue({ response: { data: { detail } } });
+  const view = await openNewUser();
+  fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
+  const editor = within(screen.getByRole('dialog', { name: 'Add New User' }));
+  expect((await editor.findByRole('alert')).textContent).toBe(typeof detail === 'string' ? detail : 'email: Invalid email');
+  expect(editor.getByLabelText('Full Name').value).toBe(' Vanessa ');
+  expect(screen.queryByText('Vanessa')).toBeNull();
+  view.unmount();
+  render(<DataAssets />);
+  expect(await screen.findByText('No users found')).toBeTruthy();
+});
+
+test('waits for creation before adding any row and blocks duplicate submissions', async () => {
+  let finish;
+  usersAPI.createUser.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  await openNewUser();
+  fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
+  expect(screen.getByRole('button', { name: 'Saving...' }).disabled).toBe(true);
+  expect(screen.getByRole('button', { name: 'Cancel' }).disabled).toBe(true);
+  expect(screen.getByRole('button', { name: 'Close item form' }).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Saving...' }));
+  expect(usersAPI.createUser).toHaveBeenCalledTimes(1);
+  expect(screen.queryByText('Vanessa')).toBeNull();
+  usersAPI.listUsers.mockResolvedValue([employee]);
+  finish({});
+  expect(await screen.findByText('Vanessa')).toBeTruthy();
+});
+
+test('does not offer to create again when creation succeeded but refreshing the list failed', async () => {
+  await openNewUser();
+  usersAPI.createUser.mockResolvedValue({});
+  usersAPI.listUsers.mockRejectedValue(new Error('Network unavailable'));
+  fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('User was created, but the list could not be refreshed');
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(usersAPI.createUser).toHaveBeenCalledTimes(1);
+});
+
+test('requires a nonblank name and supports optional username and department', async () => {
+  await openNewUser();
+  fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: '   ' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
+  expect(screen.getByRole('alert').textContent).toContain('Full name and organization email are required');
+  expect(usersAPI.createUser).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: 'Vanessa' } });
+  fireEvent.change(screen.getByLabelText('Username (optional)'), { target: { value: ' ' } });
+  fireEvent.change(screen.getByLabelText('Department'), { target: { value: '' } });
+  usersAPI.createUser.mockResolvedValue({});
+  fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(usersAPI.createUser).toHaveBeenCalledWith(expect.objectContaining({ username: null, department: null }));
+});
+
+test('user removal persists through the backend after remount', async () => {
+  let storedUsers = [employee];
+  usersAPI.listUsers.mockImplementation(async () => storedUsers);
+  usersAPI.deleteUser.mockImplementation(async () => { storedUsers = []; });
+  const view = render(<DataAssets />);
+  await screen.findByText('Vanessa');
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Select Vanessa' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove 1 Items' }));
+  await waitFor(() => expect(screen.queryByText('Vanessa')).toBeNull());
+  expect(usersAPI.deleteUser).toHaveBeenCalledWith(42);
+  view.unmount();
+  render(<DataAssets />);
+  expect(await screen.findByText('No users found')).toBeTruthy();
+});
+
+test('partial deletion keeps rejected users and displays the backend reason', async () => {
+  const secondUser = { ...employee, id: 43, full_name: 'Another User', email: 'another@icttoolsasm.com' };
+  usersAPI.listUsers.mockResolvedValue([employee, secondUser]);
+  usersAPI.deleteUser.mockImplementation(async (id) => {
+    if (id === 42) {
+      const error = new Error('User has ticket history');
+      error.response = { data: { detail: 'User has ticket history. Deactivate instead.' } };
+      throw error;
+    }
+  });
+  render(<DataAssets />);
+  await screen.findByText('Vanessa');
+  fireEvent.click(screen.getByRole('button', { name: 'Select All' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove 2 Items' }));
+  expect((await screen.findByRole('alert')).textContent).toContain('Deactivate instead.');
+  expect(screen.getByText('Vanessa')).toBeTruthy();
+  expect(screen.queryByText('Another User')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Remove 1 Items' })).toBeTruthy();
+});
+
+test('read-only account roles cannot add or remove users', async () => {
+  mockRole = 'MANAGER';
+  render(<DataAssets />);
+  await waitFor(() => expect(usersAPI.listUsers).toHaveBeenCalled());
+  expect(screen.queryByRole('button', { name: 'Add New' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Remove', exact: true })).toBeNull();
 });
 
 const renderDevices = async () => {

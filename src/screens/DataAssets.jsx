@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getApiErrorMessage } from '../utils/apiError';
 
 const EMPTY_ASSET = { name: '', category: '', serial_number: '', status: 'Available' };
+const EMPTY_USER = { name: '', username: '', email: '', department: '' };
 
 const DataAssets = () => {
   const { user: currentUser } = useAuth();
@@ -34,9 +35,14 @@ const DataAssets = () => {
   const [viewingAsset, setViewingAsset] = useState(null);
   const [assetFormError, setAssetFormError] = useState('');
   const [savingAsset, setSavingAsset] = useState(false);
+  const [savingUser, setSavingUser] = useState(false);
+  const [userFormError, setUserFormError] = useState('');
+  const [removingItems, setRemovingItems] = useState(false);
+  const [removeError, setRemoveError] = useState('');
+  const savingItem = savingAsset || savingUser;
 
   // New item form state
-  const [newUser, setNewUser] = useState({ name: '', email: '', department: '', role: 'User', status: 'Active' });
+  const [newUser, setNewUser] = useState(EMPTY_USER);
   const [newAsset, setNewAsset] = useState(EMPTY_ASSET);
 
   const loadUsers = useCallback(async () => {
@@ -58,8 +64,10 @@ const DataAssets = () => {
           status: user.is_active ? 'Active' : 'Inactive',
         }));
       setUsers(mappedUsers);
+      return true;
     } catch {
       setUserLoadMessage('Unable to load users from server.');
+      return false;
     }
   }, []);
 
@@ -129,9 +137,11 @@ const DataAssets = () => {
 
 
   const openAddModal = () => {
+    if (activeTab === 'data' && !canManageUsers) return;
     setEditingAsset(null);
     setNewAsset(EMPTY_ASSET);
     setAssetFormError('');
+    setUserFormError('');
     setShowAddModal(true);
   };
 
@@ -143,7 +153,7 @@ const DataAssets = () => {
   };
 
   const closeItemModal = () => {
-    if (savingAsset) return;
+    if (savingItem) return;
     setShowAddModal(false);
     setEditingAsset(null);
     setAssetFormError('');
@@ -151,11 +161,37 @@ const DataAssets = () => {
 
   const handleSaveItem = async (event) => {
     event?.preventDefault();
-    if (savingAsset) return;
+    if (savingItem) return;
     if (activeTab === 'data') {
-      const newId = users.length + 1;
-      setUsers([...users, { id: newId, ...newUser }]);
-      setNewUser({ name: '', email: '', department: '', role: 'User', status: 'Active' });
+      if (!canManageUsers) return;
+      const payload = {
+        full_name: newUser.name.trim(),
+        username: newUser.username.trim() || null,
+        email: newUser.email.trim().toLowerCase(),
+        department: newUser.department.trim() || null,
+        role: 'USER',
+      };
+      if (!payload.full_name || !payload.email) {
+        setUserFormError('Full name and organization email are required.');
+        return;
+      }
+      setSavingUser(true);
+      setUserFormError('');
+      try {
+        const response = await usersAPI.createUser(payload);
+        const refreshed = await loadUsers();
+        setNewUser(EMPTY_USER);
+        if (refreshed) {
+          showActionFeedback(response?.message || 'User created successfully.');
+        } else {
+          setUserActionMessage({ text: 'User was created, but the list could not be refreshed. Reload the page to see the saved account.', type: 'error' });
+        }
+      } catch (error) {
+        setUserFormError(getApiErrorMessage(error, 'Failed to create user.'));
+        return;
+      } finally {
+        setSavingUser(false);
+      }
     } else {
       const payload = {
         name: newAsset.name.trim(),
@@ -192,16 +228,33 @@ const DataAssets = () => {
     setShowAddModal(false);
   };
 
-  const handleRemoveItems = () => {
+  const handleRemoveItems = async () => {
+    if (removingItems) return;
+    if (activeTab === 'data' && !canManageUsers) return;
+    setRemovingItems(true);
+    setRemoveError('');
+    const items = activeTab === 'data'
+      ? users.filter((user) => selectedItems.includes(`user-${user.id}`))
+      : assets.filter((asset) => selectedItems.includes(`asset-${asset.id}`));
+    const results = await Promise.allSettled(items.map((item) => activeTab === 'data'
+      ? usersAPI.deleteUser(item.id)
+      : assetAPI.remove(item.id)));
+    const removedIds = items.filter((_, index) => results[index].status === 'fulfilled').map((item) => item.id);
+    const type = activeTab === 'data' ? 'user' : 'asset';
     if (activeTab === 'data') {
-      setUsers(users.filter(user => !selectedItems.includes(`user-${user.id}`)));
+      setUsers((previous) => previous.filter((user) => !removedIds.includes(user.id)));
     } else {
-      Promise.all(assets.filter(asset => selectedItems.includes(`asset-${asset.id}`)).map((asset) => assetAPI.remove(asset.id)))
-        .then(() => setAssets(assets.filter(asset => !selectedItems.includes(`asset-${asset.id}`))))
-        .catch(() => showActionFeedback('Failed to remove one or more assets.', 'error'));
+      setAssets((previous) => previous.filter((asset) => !removedIds.includes(asset.id)));
     }
-    setSelectedItems([]);
-    setShowRemoveModal(false);
+    setSelectedItems((previous) => previous.filter((key) => !removedIds.some((id) => key === `${type}-${id}`)));
+    setRemovingItems(false);
+    const failure = results.find((result) => result.status === 'rejected');
+    if (failure) {
+      setRemoveError(getApiErrorMessage(failure.reason, 'Failed to remove one or more items.'));
+    } else {
+      setShowRemoveModal(false);
+      showActionFeedback('Selected items removed successfully.');
+    }
   };
 
   const toggleSelectItem = (type, id) => {
@@ -256,13 +309,13 @@ const DataAssets = () => {
         <div className="tabs">
           <button 
             className={`tab-btn ${activeTab === 'data' ? 'active' : ''}`}
-            onClick={() => setActiveTab('data')}
+            onClick={() => { setActiveTab('data'); setSelectedItems([]); }}
           >
             Data
           </button>
           <button 
             className={`tab-btn ${activeTab === 'assets' ? 'active' : ''}`}
-            onClick={() => setActiveTab('assets')}
+            onClick={() => { setActiveTab('assets'); setSelectedItems([]); }}
           >
             IT Devices
           </button>
@@ -289,16 +342,18 @@ const DataAssets = () => {
             <button className="action-btn view-btn" onClick={selectAll}>
               Select All
             </button>
+            {(activeTab === 'assets' || canManageUsers) && <>
             <button className="action-btn add-btn" onClick={openAddModal}>
               <FaPlus aria-hidden="true" /> Add New
             </button>
             <button 
               className="action-btn remove-btn" 
-              onClick={() => setShowRemoveModal(true)}
+              onClick={() => { setRemoveError(''); setShowRemoveModal(true); }}
               disabled={selectedItems.length === 0}
             >
               <FaTrash aria-hidden="true" /> Remove
             </button>
+            </>}
           </div>
         </div>
 
@@ -347,6 +402,7 @@ const DataAssets = () => {
                           <td>
                             <input 
                               type="checkbox"
+                              aria-label={`Select ${user.name}`}
                               checked={selectedItems.includes(`user-${user.id}`)}
                               onChange={() => toggleSelectItem('user', user.id)}
                             />
@@ -487,35 +543,51 @@ const DataAssets = () => {
             <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="item-modal-title">
               <div className="modal-header">
                 <h3 id="item-modal-title">{editingAsset ? 'Edit IT Device' : `Add New ${activeTab === 'data' ? 'User' : 'Asset'}`}</h3>
-                <button className="close-modal" aria-label="Close item form" onClick={closeItemModal} disabled={savingAsset}>✕</button>
+                <button className="close-modal" aria-label="Close item form" onClick={closeItemModal} disabled={savingItem}>✕</button>
               </div>
 
               <div className="modal-body">
                 {activeTab === 'data' ? (
-                  <div className="add-form">
+                  <form className="add-form" id="user-editor-form" onSubmit={handleSaveItem}>
                     <h4>User Details</h4>
+                    {userFormError && <p className="status-message error" role="alert">{userFormError}</p>}
+                    <p className="field-hint">Use an @icttoolsasm.com organization email. Login details will be emailed after the account is saved.</p>
                     <div className="form-group">
-                      <label>Full Name</label>
+                      <label htmlFor="user-full-name">Full Name</label>
                       <input
+                        id="user-full-name"
                         type="text"
+                        required
                         value={newUser.name}
                         onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                         placeholder="Enter full name"
                       />
                     </div>
                     <div className="form-group">
-                      <label>Email</label>
+                      <label htmlFor="user-username">Username (optional)</label>
                       <input
+                        id="user-username"
+                        type="text"
+                        value={newUser.username}
+                        onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="user-email">Email</label>
+                      <input
+                        id="user-email"
                         type="email"
+                        required
                         value={newUser.email}
                         onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                        placeholder="email@rab.gov.rw"
+                        placeholder="name@icttoolsasm.com"
                       />
                     </div>
                     <div className="form-row">
                       <div className="form-group half">
-                        <label>Department</label>
+                        <label htmlFor="user-department">Department</label>
                         <input
+                          id="user-department"
                           type="text"
                           value={newUser.department}
                           onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
@@ -523,18 +595,11 @@ const DataAssets = () => {
                         />
                       </div>
                       <div className="form-group half">
-                        <label>Role</label>
-                        <select
-                          value={newUser.role}
-                          onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                        >
-                          <option value="User">User</option>
-                          <option value="Manager">Manager</option>
-                          <option value="Admin">Admin</option>
-                        </select>
+                        <label htmlFor="user-role">Role</label>
+                        <input id="user-role" value="User" readOnly />
                       </div>
                     </div>
-                  </div>
+                  </form>
                 ) : (
                   <form className="add-form" id="asset-editor-form" onSubmit={handleSaveItem}>
                     {assetFormError && <p className="status-message error" role="alert">{assetFormError}</p>}
@@ -595,8 +660,8 @@ const DataAssets = () => {
               </div>
 
               <div className="modal-footer">
-                <button className="cancel-btn" onClick={closeItemModal} disabled={savingAsset}>Cancel</button>
-                <button className="save-btn" type={activeTab === 'assets' ? 'submit' : 'button'} form={activeTab === 'assets' ? 'asset-editor-form' : undefined} onClick={activeTab === 'data' ? handleSaveItem : undefined} disabled={savingAsset}>{savingAsset ? 'Saving...' : editingAsset ? 'Save Changes' : 'Add Item'}</button>
+                <button className="cancel-btn" onClick={closeItemModal} disabled={savingItem}>Cancel</button>
+                <button className="save-btn" type="submit" form={activeTab === 'assets' ? 'asset-editor-form' : 'user-editor-form'} disabled={savingItem}>{savingItem ? 'Saving...' : editingAsset ? 'Save Changes' : 'Add Item'}</button>
               </div>
             </div>
           </div>
@@ -622,21 +687,22 @@ const DataAssets = () => {
         {/* Remove Confirmation Modal */}
         {showRemoveModal && (
           <div className="modal-overlay">
-            <div className="modal-content remove-modal">
+            <div className="modal-content remove-modal" role="dialog" aria-modal="true" aria-labelledby="remove-items-title">
               <div className="modal-header">
-                <h3>Confirm Removal</h3>
-                <button className="close-modal" onClick={() => setShowRemoveModal(false)}>✕</button>
+                <h3 id="remove-items-title">Confirm Removal</h3>
+                <button className="close-modal" onClick={() => setShowRemoveModal(false)} disabled={removingItems}>✕</button>
               </div>
               
               <div className="modal-body">
                 <p>Are you sure you want to remove <strong>{selectedItems.length}</strong> selected item(s)?</p>
                 <p className="warning-text">This action cannot be undone.</p>
+                {removeError && <p className="status-message error" role="alert">{removeError}</p>}
               </div>
 
               <div className="modal-footer">
-                <button className="cancel-btn" onClick={() => setShowRemoveModal(false)}>Cancel</button>
-                <button className="remove-confirm-btn" onClick={handleRemoveItems}>
-                  Remove {selectedItems.length} Items
+                <button className="cancel-btn" onClick={() => setShowRemoveModal(false)} disabled={removingItems}>Cancel</button>
+                <button className="remove-confirm-btn" onClick={handleRemoveItems} disabled={removingItems}>
+                  {removingItems ? 'Removing...' : `Remove ${selectedItems.length} Items`}
                 </button>
               </div>
             </div>
