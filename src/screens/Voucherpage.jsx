@@ -6,6 +6,7 @@ import TopNavbar from '../components/layout/TopNavbar';
 import { CalendarScheduler } from '../components/ui/calendar-scheduler';
 import DropdownSelect from '../components/ui/dropdown-select';
 import { documentAPI, voucherAPI } from '../services/api';
+import { getApiErrorMessage } from '../utils/apiError';
 
 const DRAFT_STORAGE_KEY = 'muri_voucher_draft';
 const STATUS_META = {
@@ -155,7 +156,7 @@ const VoucherPage = () => {
       setNotesState(nextNotesState);
       setDocumentLinkState(nextDocumentLinkState);
     } catch (error) {
-      showMessage(error?.response?.data?.detail || 'Failed to load tickets', 'error');
+      showMessage(getApiErrorMessage(error, 'Failed to load tickets'), 'error');
     } finally {
       setLoading(false);
     }
@@ -256,7 +257,7 @@ const VoucherPage = () => {
       await loadTickets();
       setActiveTab('list');
     } catch (error) {
-      showMessage(error?.response?.data?.detail || 'Failed to submit ticket', 'error');
+      showMessage(getApiErrorMessage(error, 'Failed to submit ticket'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -269,7 +270,7 @@ const VoucherPage = () => {
       showMessage('Ticket status updated.', 'success');
       await loadTickets();
     } catch (error) {
-      showMessage(error?.response?.data?.detail || 'Failed to update ticket status', 'error');
+      showMessage(getApiErrorMessage(error, 'Failed to update ticket status'), 'error');
     } finally {
       setUpdatingTicketIds((previous) => {
         const next = new Set(previous);
@@ -289,7 +290,7 @@ const VoucherPage = () => {
       showMessage('Diagnosis and action saved.', 'success');
       await loadTickets();
     } catch (error) {
-      showMessage(error?.response?.data?.detail || 'Failed to save diagnosis/action', 'error');
+      showMessage(getApiErrorMessage(error, 'Failed to save diagnosis/action'), 'error');
     }
   };
 
@@ -305,7 +306,7 @@ const VoucherPage = () => {
       showMessage('Document linked to ticket successfully.', 'success');
       await loadTickets();
     } catch (error) {
-      showMessage(error?.response?.data?.detail || 'Failed to link document', 'error');
+      showMessage(getApiErrorMessage(error, 'Failed to link document'), 'error');
     }
   };
 
@@ -622,20 +623,7 @@ const VoucherPage = () => {
                           <button className="voucher-ticket-action" type="button" onClick={() => handleSaveNotes(ticket.id)}>Save Diagnosis/Action</button>
                         </div>
 
-                        <div className="voucher-ticket-inline">
-                          <label className="voucher-ticket-label">Link Document:</label>
-                          <DropdownSelect
-                            className="voucher-status-dropdown"
-                            value={documentLinkState[ticket.id] || ''}
-                            onChange={(value) => setDocumentLinkState((prev) => ({ ...prev, [ticket.id]: value }))}
-                            placeholder="Select document"
-                            options={documents.map((doc) => ({
-                              value: String(doc.id),
-                              label: `${doc.document_ref} - ${doc.name_of_staff}`,
-                            }))}
-                          />
-                          <button className="voucher-ticket-action" type="button" onClick={() => handleLinkDocument(ticket.id)}>Link</button>
-                        </div>
+w
                       </div>
                     )}
                   </div>
