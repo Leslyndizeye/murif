@@ -8,6 +8,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { assetAPI, documentAPI, reportAPI, usersAPI, voucherAPI } from '../../../services/api';
 import { getApiErrorMessage } from '../../../utils/apiError';
+import { displayRole } from '../../../utils/roles';
 import UnifiedSidebar from '../../../components/layout/UnifiedSidebar';
 import TopNavbar from '../../../components/layout/TopNavbar';
 
@@ -449,7 +450,7 @@ const ITDashboard = () => {
                         const name = person.full_name || person.username || person.email;
                         return <tr key={person.id}>
                           <td><span className="it-table-avatar">{(name || 'U').slice(0, 2).toUpperCase()}</span><strong>{name}</strong></td>
-                          <td>{person.email}</td><td>{person.role || 'USER'}</td>
+                          <td>{person.email}</td><td>{displayRole(person.role || 'USER')}</td>
                           <td><span className={`it-state-pill${person.is_active ? '' : ' it-state-pill-inactive'}`}>{person.is_active ? 'Active' : 'Inactive'}</span></td>
                         </tr>;
                       })}</tbody>

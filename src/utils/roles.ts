@@ -5,6 +5,10 @@
 
 export type Role = 'admin' | 'manager' | 'it' | 'voucher' | 'user';
 
+// Keep stored role values compatible with existing accounts and backend permissions.
+export const displayRole = (role: string | null | undefined): string =>
+  (role || '').toLowerCase() === 'voucher' ? 'Logistics' : role || '';
+
 export const dashboardPathForRole = (role: string | null | undefined): string => {
   switch ((role || '').toLowerCase()) {
     case 'admin':

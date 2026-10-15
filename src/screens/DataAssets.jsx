@@ -6,6 +6,9 @@ import { assetAPI, usersAPI } from '../services/api';
 import { ButtonUtility } from '../components/ui/button-utility';
 import { Eye, Pencil } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiErrorMessage } from '../utils/apiError';
+
+const EMPTY_ASSET = { name: '', category: '', serial_number: '', status: 'Available' };
 
 const DataAssets = () => {
   const { user: currentUser } = useAuth();
@@ -27,10 +30,14 @@ const DataAssets = () => {
   const [userActionMessage, setUserActionMessage] = useState({ text: '', type: '' });
 
   const [assets, setAssets] = useState([]);
+  const [editingAsset, setEditingAsset] = useState(null);
+  const [viewingAsset, setViewingAsset] = useState(null);
+  const [assetFormError, setAssetFormError] = useState('');
+  const [savingAsset, setSavingAsset] = useState(false);
 
   // New item form state
   const [newUser, setNewUser] = useState({ name: '', email: '', department: '', role: 'User', status: 'Active' });
-  const [newAsset, setNewAsset] = useState({ name: '', category: '', serial_number: '', status: 'Available' });
+  const [newAsset, setNewAsset] = useState(EMPTY_ASSET);
 
   const loadUsers = useCallback(async () => {
     try {
@@ -78,7 +85,7 @@ const DataAssets = () => {
       await loadUsers();
       showActionFeedback(`User ${nextIsActive ? 'activated' : 'deactivated'} successfully.`);
     } catch (error) {
-      showActionFeedback(error?.response?.data?.detail || 'Failed to update user status.', 'error');
+      showActionFeedback(getApiErrorMessage(error, 'Failed to update user status.'), 'error');
     }
   };
 
@@ -116,24 +123,70 @@ const DataAssets = () => {
       setTargetUser(null);
       showActionFeedback('Password reset successfully.');
     } catch (error) {
-      showActionFeedback(error?.response?.data?.detail || 'Failed to reset password.', 'error');
+      showActionFeedback(getApiErrorMessage(error, 'Failed to reset password.'), 'error');
     }
   };
 
 
-  const handleAddItem = async () => {
+  const openAddModal = () => {
+    setEditingAsset(null);
+    setNewAsset(EMPTY_ASSET);
+    setAssetFormError('');
+    setShowAddModal(true);
+  };
+
+  const openEditAsset = (asset) => {
+    setEditingAsset(asset);
+    setNewAsset({ name: asset.name, category: asset.category, serial_number: asset.serial_number, status: asset.status });
+    setAssetFormError('');
+    setShowAddModal(true);
+  };
+
+  const closeItemModal = () => {
+    if (savingAsset) return;
+    setShowAddModal(false);
+    setEditingAsset(null);
+    setAssetFormError('');
+  };
+
+  const handleSaveItem = async (event) => {
+    event?.preventDefault();
+    if (savingAsset) return;
     if (activeTab === 'data') {
       const newId = users.length + 1;
       setUsers([...users, { id: newId, ...newUser }]);
       setNewUser({ name: '', email: '', department: '', role: 'User', status: 'Active' });
     } else {
-      try {
-        const createdAsset = await assetAPI.create(newAsset);
-        setAssets((previous) => [createdAsset, ...previous]);
-        setNewAsset({ name: '', category: '', serial_number: '', status: 'Available' });
-      } catch (error) {
-        showActionFeedback(error?.response?.data?.detail || 'Failed to create asset.', 'error');
+      const payload = {
+        name: newAsset.name.trim(),
+        category: newAsset.category.trim(),
+        serial_number: newAsset.serial_number.trim(),
+      };
+      if (!payload.name || !payload.category || !payload.serial_number) {
+        setAssetFormError('Asset name, category, and serial number are required.');
         return;
+      }
+      if (assets.some((asset) => asset.id !== editingAsset?.id && asset.serial_number === payload.serial_number)) {
+        setAssetFormError('An asset with this serial number already exists.');
+        return;
+      }
+      setSavingAsset(true);
+      setAssetFormError('');
+      try {
+        const savedAsset = editingAsset
+          ? await assetAPI.update(editingAsset.id, { ...payload, status: newAsset.status })
+          : await assetAPI.create(payload);
+        setAssets((previous) => editingAsset
+          ? previous.map((asset) => asset.id === savedAsset.id ? savedAsset : asset)
+          : [savedAsset, ...previous]);
+        setNewAsset(EMPTY_ASSET);
+        setEditingAsset(null);
+        showActionFeedback(editingAsset ? 'IT device updated successfully.' : 'IT device added successfully.');
+      } catch (error) {
+        setAssetFormError(getApiErrorMessage(error, editingAsset ? 'Failed to update IT device.' : 'Failed to create asset.'));
+        return;
+      } finally {
+        setSavingAsset(false);
       }
     }
     setShowAddModal(false);
@@ -236,7 +289,7 @@ const DataAssets = () => {
             <button className="action-btn view-btn" onClick={selectAll}>
               Select All
             </button>
-            <button className="action-btn add-btn" onClick={() => setShowAddModal(true)}>
+            <button className="action-btn add-btn" onClick={openAddModal}>
               <FaPlus aria-hidden="true" /> Add New
             </button>
             <button 
@@ -248,6 +301,8 @@ const DataAssets = () => {
             </button>
           </div>
         </div>
+
+        {userActionMessage.text && <p className={`status-message ${userActionMessage.type}`} role={userActionMessage.type === 'error' ? 'alert' : 'status'}>{userActionMessage.text}</p>}
 
         {/* Data Tab Content */}
         {activeTab === 'data' && (
@@ -263,18 +318,6 @@ const DataAssets = () => {
               </p>
               {userLoadMessage && (
                 <p style={{ margin: '0 0 10px', color: '#b91c1c', fontSize: '13px' }}>{userLoadMessage}</p>
-              )}
-              {userActionMessage.text && (
-                <p
-                  style={{
-                    margin: '0 0 10px',
-                    color: userActionMessage.type === 'error' ? '#b91c1c' : '#065f46',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {userActionMessage.text}
-                </p>
               )}
               <div className="table-container">
                 <table className="data-table">
@@ -397,8 +440,8 @@ const DataAssets = () => {
                             </span>
                           </td>
                           <td>
-                            <ButtonUtility icon={Pencil} tooltip="Edit asset" onClick={() => {}} />
-                            <ButtonUtility icon={Eye} tooltip="View asset" onClick={() => {}} />
+                            <ButtonUtility icon={Pencil} tooltip={`Edit ${asset.name}`} onClick={() => openEditAsset(asset)} />
+                            <ButtonUtility icon={Eye} tooltip={`View ${asset.name}`} onClick={() => setViewingAsset(asset)} />
                           </td>
                         </tr>
                       ))
@@ -429,9 +472,9 @@ const DataAssets = () => {
                 </p>
               </div>
               <div className="summary-card">
-                <h4>Maintenance</h4>
+                <h4>Disposed</h4>
                 <p className="summary-number">
-                  {assets.filter(a => a.status === 'Under Repair').length}
+                  {assets.filter(a => a.status === 'Disposed').length}
                 </p>
               </div>
             </div>
@@ -441,10 +484,10 @@ const DataAssets = () => {
         {/* Add Modal */}
         {showAddModal && (
           <div className="modal-overlay">
-            <div className="modal-content">
+            <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="item-modal-title">
               <div className="modal-header">
-                <h3>Add New {activeTab === 'data' ? 'User' : 'Asset'}</h3>
-                <button className="close-modal" onClick={() => setShowAddModal(false)}>✕</button>
+                <h3 id="item-modal-title">{editingAsset ? 'Edit IT Device' : `Add New ${activeTab === 'data' ? 'User' : 'Asset'}`}</h3>
+                <button className="close-modal" aria-label="Close item form" onClick={closeItemModal} disabled={savingAsset}>✕</button>
               </div>
 
               <div className="modal-body">
@@ -493,11 +536,15 @@ const DataAssets = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="add-form">
+                  <form className="add-form" id="asset-editor-form" onSubmit={handleSaveItem}>
+                    {assetFormError && <p className="status-message error" role="alert">{assetFormError}</p>}
                     <div className="form-group">
-                      <label>Asset Name</label>
+                      <label htmlFor="asset-name">Asset Name</label>
                       <input
+                        id="asset-name"
                         type="text"
+                        required
+                        maxLength={200}
                         value={newAsset.name}
                         onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
                         placeholder="Enter asset name"
@@ -505,18 +552,24 @@ const DataAssets = () => {
                     </div>
                     <div className="form-row">
                       <div className="form-group half">
-                        <label>Category</label>
+                        <label htmlFor="asset-category">Category</label>
                         <input
+                          id="asset-category"
                           type="text"
+                          required
+                          maxLength={100}
                           value={newAsset.category}
                           onChange={(e) => setNewAsset({ ...newAsset, category: e.target.value })}
                           placeholder="e.g., Infrastructure"
                         />
                       </div>
                       <div className="form-group half">
-                        <label>Serial Number</label>
+                        <label htmlFor="asset-serial-number">Serial Number</label>
                         <input
+                          id="asset-serial-number"
                           type="text"
+                          required
+                          maxLength={100}
                           value={newAsset.serial_number}
                           onChange={(e) => setNewAsset({ ...newAsset, serial_number: e.target.value })}
                           placeholder="Manufacturer serial number"
@@ -524,25 +577,44 @@ const DataAssets = () => {
                       </div>
                     </div>
                     <div className="form-group">
-                      <label>Status</label>
+                      <label htmlFor="asset-status">Status</label>
                       <select
+                        id="asset-status"
+                        disabled={!editingAsset}
                         value={newAsset.status}
                         onChange={(e) => setNewAsset({ ...newAsset, status: e.target.value })}
                       >
                         <option value="Available">Available</option>
                         <option value="Assigned">Assigned</option>
-                        <option value="Under Repair">Under Repair</option>
                         <option value="Disposed">Disposed</option>
                       </select>
+                      {!editingAsset && <p className="field-hint">New devices start as Available. Use Logistics to record an asset issue.</p>}
                     </div>
-                  </div>
+                  </form>
                 )}
               </div>
 
               <div className="modal-footer">
-                <button className="cancel-btn" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button className="save-btn" onClick={handleAddItem}>Add Item</button>
+                <button className="cancel-btn" onClick={closeItemModal} disabled={savingAsset}>Cancel</button>
+                <button className="save-btn" type={activeTab === 'assets' ? 'submit' : 'button'} form={activeTab === 'assets' ? 'asset-editor-form' : undefined} onClick={activeTab === 'data' ? handleSaveItem : undefined} disabled={savingAsset}>{savingAsset ? 'Saving...' : editingAsset ? 'Save Changes' : 'Add Item'}</button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {viewingAsset && (
+          <div className="modal-overlay">
+            <div className="modal-content" role="dialog" aria-modal="true" aria-labelledby="asset-details-title">
+              <div className="modal-header"><h3 id="asset-details-title">IT Device Details</h3><button className="close-modal" aria-label="Close device details" onClick={() => setViewingAsset(null)}>✕</button></div>
+              <div className="modal-body">
+                <dl>
+                  <dt>Asset Name</dt><dd>{viewingAsset.name}</dd>
+                  <dt>Category</dt><dd>{viewingAsset.category}</dd>
+                  <dt>Serial Number</dt><dd>{viewingAsset.serial_number}</dd>
+                  <dt>Status</dt><dd>{viewingAsset.status}</dd>
+                </dl>
+              </div>
+              <div className="modal-footer"><button className="cancel-btn" onClick={() => setViewingAsset(null)}>Close</button></div>
             </div>
           </div>
         )}

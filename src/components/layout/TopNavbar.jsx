@@ -1,4 +1,5 @@
 import { useAuth } from '../../contexts/AuthContext';
+import { displayRole } from '../../utils/roles';
 
 /**
  * Shared top bar used on every page: logo, dark mode toggle, user avatar.
@@ -46,7 +47,7 @@ const TopNavbar = ({ title, rightExtra }) => {
               </span>
               {(user.department || user.role) && (
                 <span className="muri-topnav-user-role">
-                  {user.department && `${user.department} • `}{user.role || ''}
+                  {user.department && `${user.department} • `}{displayRole(user.role)}
                 </span>
               )}
             </div>

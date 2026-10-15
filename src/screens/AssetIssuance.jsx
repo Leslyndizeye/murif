@@ -4,9 +4,10 @@ import UnifiedSidebar from '../components/layout/UnifiedSidebar';
 import TopNavbar from '../components/layout/TopNavbar';
 import { useAuth } from '../contexts/AuthContext';
 import { assetAPI, assetVoucherAPI } from '../services/api';
+import { getApiErrorMessage } from '../utils/apiError';
 
 /**
- * Voucher management: issue ICT assets to staff, track returns, and keep a
+ * Logistics management: issue ICT assets to staff, track returns, and keep a
  * searchable history. Backed by the real /assets and /asset-vouchers API.
  */
 const AssetIssuance = () => {
@@ -33,7 +34,7 @@ const AssetIssuance = () => {
         setVouchers(voucherData || []);
         setLoadError('');
       })
-      .catch(() => setLoadError('Failed to load vouchers.'))
+      .catch(() => setLoadError('Failed to load logistics records.'))
       .finally(() => setLoading(false));
   };
 
@@ -80,7 +81,7 @@ const AssetIssuance = () => {
         setForm({ asset_id: '', issued_to: '', issued_by: '' });
         setShowForm(false);
       })
-      .catch((error) => setFormError(error?.response?.data?.detail || 'Failed to issue asset.'))
+      .catch((error) => setFormError(getApiErrorMessage(error, 'Failed to issue asset.')))
       .finally(() => setSubmitting(false));
   };
 
@@ -95,7 +96,7 @@ const AssetIssuance = () => {
   };
 
   const handleExport = () => {
-    const header = ['Voucher ID', 'Asset', 'Category', 'Serial Number', 'Issued To', 'Issued By', 'Date Issued', 'Status'];
+    const header = ['Logistics ID', 'Asset', 'Category', 'Serial Number', 'Issued To', 'Issued By', 'Date Issued', 'Status'];
     const rows = filteredVouchers.map((v) => [
       v.voucher_number,
       v.asset_name,
@@ -113,7 +114,7 @@ const AssetIssuance = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `vouchers-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `logistics-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -228,7 +229,7 @@ const AssetIssuance = () => {
               <FaSearch aria-hidden="true" />
               <input
                 type="text"
-                placeholder="Search by voucher ID, asset name, serial number, or staff member..."
+                placeholder="Search by logistics ID, asset name, serial number, or staff member..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -248,7 +249,7 @@ const AssetIssuance = () => {
             <table className="issuance-table">
               <thead>
                 <tr>
-                  <th>Voucher ID</th>
+                  <th>Logistics ID</th>
                   <th>Asset</th>
                   <th>Category</th>
                   <th>Serial Number</th>
@@ -263,7 +264,7 @@ const AssetIssuance = () => {
                 {loading && (
                   <tr>
                     <td colSpan={9} className="issuance-empty">
-                      Loading vouchers...
+                      Loading logistics records...
                     </td>
                   </tr>
                 )}
@@ -304,7 +305,7 @@ const AssetIssuance = () => {
                 {!loading && filteredVouchers.length === 0 && (
                   <tr>
                     <td colSpan={9} className="issuance-empty">
-                      No vouchers found.
+                      No logistics records found.
                     </td>
                   </tr>
                 )}
@@ -318,7 +319,7 @@ const AssetIssuance = () => {
         <div className="modal-overlay" onClick={() => setDetailsVoucher(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Voucher {detailsVoucher.voucher_number}</h3>
+              <h3>Logistics record {detailsVoucher.voucher_number}</h3>
               <button type="button" className="close-modal" onClick={() => setDetailsVoucher(null)}>
                 <FaTimes />
               </button>
@@ -326,7 +327,7 @@ const AssetIssuance = () => {
             <div className="modal-body">
               <div className="issuance-details-grid">
                 <div>
-                  <span>Voucher ID</span>
+                  <span>Logistics ID</span>
                   <strong>{detailsVoucher.voucher_number}</strong>
                 </div>
                 <div>

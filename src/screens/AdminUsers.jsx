@@ -14,6 +14,7 @@ import TopNavbar from '../components/layout/TopNavbar';
 import { useAuth } from '../contexts/AuthContext';
 import { departmentAPI, stationAPI, usersAPI } from '../services/api';
 import { optionsWithFallback } from '../utils/lookupOptions';
+import { displayRole } from '../utils/roles';
 
 const EMPTY_FORM = {
   full_name: '',
@@ -319,7 +320,7 @@ const AdminUsers = () => {
                   <option value="all">All Roles</option>
                   <option value="admin">Admin</option>
                   <option value="it">IT</option>
-                  <option value="voucher">Voucher</option>
+                  <option value="voucher">Logistics</option>
                   <option value="user">User</option>
                 </select>
 
@@ -375,7 +376,7 @@ const AdminUsers = () => {
                           <td>{user.station || '-'}</td>
                           <td>
                             <span className={`role-pill role-${(user.role || '').toLowerCase()}`}>
-                              {user.role}
+                              {displayRole(user.role)}
                             </span>
                           </td>
                           <td>
@@ -506,7 +507,7 @@ const AdminUsers = () => {
                           <option value="USER">User</option>
                           <option value="IT">IT</option>
                           <option value="ADMIN">Admin</option>
-                          <option value="VOUCHER">Voucher</option>
+                          <option value="VOUCHER">Logistics</option>
                         </select>
                         {formMode === 'edit' && editingUser?.id === currentUserId && (
                           <p className="field-hint">You cannot change your own role.</p>
