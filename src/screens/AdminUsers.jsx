@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { departmentAPI, stationAPI, usersAPI } from '../services/api';
 import { optionsWithFallback } from '../utils/lookupOptions';
 import { displayRole } from '../utils/roles';
+import ManualLoginDetails from '../components/ManualLoginDetails';
 
 const EMPTY_FORM = {
   full_name: '',
@@ -27,6 +28,7 @@ const EMPTY_FORM = {
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
+  const [loginDetails, setLoginDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [actionMessage, setActionMessage] = useState({ text: '', type: '' });
@@ -152,7 +154,7 @@ const AdminUsers = () => {
     setFormError('');
     setFormSubmitting(true);
     try {
-      await usersAPI.createUser({
+      const response = await usersAPI.createUser({
         email: formState.email.trim().toLowerCase(),
         username: formState.username.trim().toLowerCase(),
         role: (formState.role || 'USER').toUpperCase(),
@@ -160,7 +162,8 @@ const AdminUsers = () => {
         department: formState.department || null,
         station: formState.station || null,
       });
-      showActionFeedback('User created successfully. Login details were emailed to them.');
+      setLoginDetails(response?.temporary_password ? response : null);
+      showActionFeedback('User created successfully. Copy the login details and send them to the user.');
       closeFormModal();
       await loadUsers();
     } catch (error) {
@@ -288,6 +291,7 @@ const AdminUsers = () => {
 
   return (
     <div className="simple-dashboard-root">
+      {loginDetails && <ManualLoginDetails details={loginDetails} onClose={() => setLoginDetails(null)} />}
       <div className="simple-container">
         <UnifiedSidebar activePath="/admin/users" />
 

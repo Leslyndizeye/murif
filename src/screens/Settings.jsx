@@ -5,6 +5,7 @@ import TopNavbar from '../components/layout/TopNavbar';
 import { departmentAPI, stationAPI, usersAPI } from '../services/api';
 import { optionsWithFallback } from '../utils/lookupOptions';
 import { getApiErrorMessage } from '../utils/apiError';
+import ManualLoginDetails from '../components/ManualLoginDetails';
 import { Checkbox } from '../components/ui/checkbox';
 import { Button } from '../components/ui/button';
 import { Check } from 'lucide-react';
@@ -23,6 +24,7 @@ const Settings = () => {
   });
   const [memberForm, setMemberForm] = useState(EMPTY_MEMBER_FORM);
   const [grantingAccess, setGrantingAccess] = useState(false);
+  const [loginDetails, setLoginDetails] = useState(null);
   const [grantFeedback, setGrantFeedback] = useState({ form: '', text: '', type: '' });
   const [passwordInfo, setPasswordInfo] = useState({
     password: '',
@@ -140,7 +142,7 @@ const Settings = () => {
     setGrantingAccess(true);
     setGrantFeedback({ form: 'member', text: '', type: '' });
     try {
-      await usersAPI.createUser({
+      const response = await usersAPI.createUser({
         email,
         role: memberForm.role,
         username,
@@ -149,7 +151,8 @@ const Settings = () => {
         station: memberForm.station || null,
       });
 
-      setGrantFeedback({ form: 'member', text: 'User access granted. Login details were emailed to them.', type: 'success' });
+      setLoginDetails(response?.temporary_password ? response : null);
+      setGrantFeedback({ form: 'member', text: 'User access granted. Copy the login details and send them to the user.', type: 'success' });
       window.dispatchEvent(new Event('asm-users-updated'));
       setMemberForm(EMPTY_MEMBER_FORM);
     } catch (error) {
@@ -174,7 +177,7 @@ const Settings = () => {
     setGrantingAccess(true);
     setGrantFeedback({ form: 'quick', text: '', type: '' });
     try {
-      await usersAPI.createUser({
+      const response = await usersAPI.createUser({
         username: normalizedUsername,
         email: normalizedEmail,
         role: quickAccessForm.role,
@@ -184,7 +187,8 @@ const Settings = () => {
       });
 
       setQuickAccessForm({ email: '', username: '', role: 'USER' });
-      setGrantFeedback({ form: 'quick', text: 'User access granted. Login details were emailed to them.', type: 'success' });
+      setLoginDetails(response?.temporary_password ? response : null);
+      setGrantFeedback({ form: 'quick', text: 'User access granted. Copy the login details and send them to the user.', type: 'success' });
       window.dispatchEvent(new Event('asm-users-updated'));
     } catch (error) {
       setGrantFeedback({ form: 'quick', text: getApiErrorMessage(error, 'Failed to grant user access.'), type: 'error' });
@@ -199,6 +203,7 @@ const Settings = () => {
 
   return (
     <div className="setting-container">
+      {loginDetails && <ManualLoginDetails details={loginDetails} onClose={() => setLoginDetails(null)} />}
       <UnifiedSidebar activePath={isITSettingsPage ? '/settings/it' : '/settings'} />
 
       <div className="setting-main">

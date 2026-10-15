@@ -101,6 +101,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    const response = await authAPI.changePassword({ current_password: currentPassword, new_password: newPassword });
+    setUser(response.user);
+    return response;
+  };
+
   const logout = () => {
     authAPI.logout();
     setUser(null);
@@ -120,6 +126,7 @@ export const AuthProvider = ({ children }) => {
     error,
     login,
     register,
+    changePassword,
     logout,
     isAuthenticated: !!user,
     hasAccess,

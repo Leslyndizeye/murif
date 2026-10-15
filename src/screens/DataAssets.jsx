@@ -7,6 +7,7 @@ import { ButtonUtility } from '../components/ui/button-utility';
 import { Eye, Pencil } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiErrorMessage } from '../utils/apiError';
+import ManualLoginDetails from '../components/ManualLoginDetails';
 
 const EMPTY_ASSET = { name: '', category: '', serial_number: '', status: 'Available' };
 const EMPTY_USER = { name: '', username: '', email: '', department: '' };
@@ -27,6 +28,7 @@ const DataAssets = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [users, setUsers] = useState([]);
+  const [loginDetails, setLoginDetails] = useState(null);
   const [userLoadMessage, setUserLoadMessage] = useState('');
   const [userActionMessage, setUserActionMessage] = useState({ text: '', type: '' });
 
@@ -180,6 +182,7 @@ const DataAssets = () => {
       try {
         const response = await usersAPI.createUser(payload);
         const refreshed = await loadUsers();
+        setLoginDetails(response?.temporary_password ? response : null);
         setNewUser(EMPTY_USER);
         if (refreshed) {
           showActionFeedback(response?.message || 'User created successfully.');
@@ -295,6 +298,7 @@ const DataAssets = () => {
   return (
     <div className="data-assets-page">
       <UnifiedSidebar activePath="/data-assets" />
+      {loginDetails && <ManualLoginDetails details={loginDetails} onClose={() => setLoginDetails(null)} />}
 
       {/* Main Content */}
       <div className="main-content">
@@ -551,7 +555,7 @@ const DataAssets = () => {
                   <form className="add-form" id="user-editor-form" onSubmit={handleSaveItem}>
                     <h4>User Details</h4>
                     {userFormError && <p className="status-message error" role="alert">{userFormError}</p>}
-                    <p className="field-hint">Use an @icttoolsasm.com organization email. Login details will be emailed after the account is saved.</p>
+                    <p className="field-hint">Use an @icttoolsasm.com organization email. After saving, copy the temporary login details and email them to the user yourself.</p>
                     <div className="form-group">
                       <label htmlFor="user-full-name">Full Name</label>
                       <input

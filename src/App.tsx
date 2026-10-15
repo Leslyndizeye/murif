@@ -21,6 +21,7 @@ import AdminDashboard from './screens/Dashboards/Admin Dashboard/admindashboard'
 import VoucherDashboard from './screens/Dashboards/Voucher Dashboard/voucherdashboard';
 import AdminUsers from './screens/AdminUsers';
 import DepartmentsStations from './screens/DepartmentsStations';
+import ChangePassword from './screens/ChangePassword';
 
 const theme = createTheme({
   palette: {
@@ -68,6 +69,7 @@ function App() {
             <Routes>
             <Route path="/" element={<GuestRoute><LoginPage /></GuestRoute>} />
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+            <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
             
             <Route path="/user-dashboard" element={
               <ProtectedRoute requiredRoles={['user']}>

@@ -43,10 +43,14 @@ test('saves the selected role, prevents duplicate submission, and signals a succ
     expect(usersAPI.createUser).toHaveBeenCalledTimes(1);
     expect(onUsersUpdated).not.toHaveBeenCalled();
     expect(usersAPI.createUser).toHaveBeenCalledWith(expect.objectContaining({ email: 'new@icttoolsasm.com', username: 'new.person', role: 'IT' }));
-    finishRequest({ message: 'Created' });
+    finishRequest({ message: 'Created', email: 'new@icttoolsasm.com', username: 'new.person', temporary_password: 'Test-temporary-234' });
     expect((await form.findByRole('status')).textContent).toContain('User access granted');
     expect(onUsersUpdated).toHaveBeenCalledTimes(1);
     expect(form.getByLabelText('Email').value).toBe('');
+    const details = within(await screen.findByRole('dialog', { name: 'Account created — send login details' }));
+    expect(details.getByLabelText('Temporary password').value).toBe('Test-temporary-234');
+    fireEvent.click(details.getByRole('button', { name: 'Done' }));
+    expect(screen.queryByLabelText('Temporary password')).toBeNull();
   } finally {
     window.removeEventListener('asm-users-updated', onUsersUpdated);
   }

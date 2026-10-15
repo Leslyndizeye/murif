@@ -41,17 +41,21 @@ test('creates the user on the backend and loads the persisted record after remou
   usersAPI.listUsers.mockImplementation(async () => storedUsers);
   usersAPI.createUser.mockImplementation(async () => {
     storedUsers = [employee];
-    return { message: 'User created successfully. Login details were emailed to them.' };
+    return { message: 'Account created. Send the login details to the user manually.', email: employee.email, username: employee.username, temporary_password: 'Test-temporary-234' };
   });
   const view = await openNewUser();
   fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
   expect(await screen.findByText('Vanessa')).toBeTruthy();
   expect(usersAPI.createUser).toHaveBeenCalledWith({ full_name: 'Vanessa', username: 'vanessa', email: 'vanessa@icttoolsasm.com', department: 'Finance', role: 'USER' });
+  const details = within(await screen.findByRole('dialog', { name: 'Account created — send login details' }));
+  expect(details.getByLabelText('Temporary password').value).toBe('Test-temporary-234');
+  fireEvent.click(details.getByRole('button', { name: 'Done' }));
   expect(screen.queryByRole('dialog')).toBeNull();
-  expect(screen.getByRole('status').textContent).toContain('Login details were emailed');
+  expect(screen.getByRole('status').textContent).toContain('Send the login details');
   view.unmount();
   render(<DataAssets />);
   expect(await screen.findByText('Vanessa')).toBeTruthy();
+  expect(screen.queryByLabelText('Temporary password')).toBeNull();
 });
 
 test.each([

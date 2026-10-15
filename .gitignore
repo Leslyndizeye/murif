@@ -1,4 +1,23 @@
+# Environment / secrets
+.env
+*.env
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
 node_modules/
 build/
+dist/
 .next/
-.env
+
+# OS
+.DS_Store
+
+**/pnpm-lock.yaml
+.next/
+venv/
+.vercel

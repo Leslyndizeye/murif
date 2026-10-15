@@ -166,7 +166,7 @@ const LoginPage = () => {
 
       if (result.success) {
         const role = result.data?.user?.role;
-        navigate(dashboardPathForRole(role));
+        navigate(result.data?.user?.must_change_password ? '/change-password' : dashboardPathForRole(role));
       } else {
         setError(result.error || 'Login failed');
       }

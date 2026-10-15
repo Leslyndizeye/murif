@@ -18,7 +18,7 @@ const GuestRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
   }
 
   if (user) {
-    return <Navigate to={dashboardPathForRole(user.role)} replace />;
+    return <Navigate to={user.must_change_password ? '/change-password' : dashboardPathForRole(user.role)} replace />;
   }
 
   return <>{children}</>;

@@ -39,6 +39,10 @@ api.interceptors.response.use(
     // expiry, so it must not trigger the hard-redirect below.
     const isAuthEndpoint = /\/auth\/(login|register)$/.test(originalRequest?.url || '');
 
+    if (error.response?.status === 403 && error.response?.data?.detail === 'Change your temporary password before continuing' && window.location.pathname !== '/change-password') {
+      window.location.href = '/change-password';
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
 
@@ -76,6 +80,16 @@ export const authAPI = {
   // Get current user
   getCurrentUser: async () => {
     const response = await api.get('/auth/me');
+    return response.data;
+  },
+
+  // Save a replacement for the temporary password and update the session.
+  changePassword: async (payload) => {
+    const response = await api.post('/auth/change-password', payload);
+    if (response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
     return response.data;
   },
 
@@ -159,7 +173,7 @@ export const reportAPI = {
 
 export const usersAPI = {
   createUser: async (payload) => {
-    const response = await api.post('/users/create-user', payload);
+    const response = await api.post('/users/create-user', { ...payload, delivery_method: 'manual' });
     return response.data;
   },
 
