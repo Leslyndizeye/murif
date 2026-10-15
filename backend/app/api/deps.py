@@ -23,6 +23,9 @@ def get_authenticated_user(
 	db: Session = Depends(get_db),
 ) -> User:
 	email = decode_access_token(credentials.credentials)
+	temporary_session = not email
+	if temporary_session:
+		email = decode_access_token(credentials.credentials, allow_temporary=True)
 	if not email:
 		raise HTTPException(status_code=401, detail="Invalid or expired token")
 
@@ -31,6 +34,8 @@ def get_authenticated_user(
 		raise HTTPException(status_code=404, detail="User not found")
 	if not user.is_active:
 		raise HTTPException(status_code=403, detail="This account is inactive")
+	if temporary_session and not user.must_change_password:
+		raise HTTPException(status_code=401, detail="Sign in again with your new password")
 
 	return user
 
@@ -52,10 +57,10 @@ def require_password_change_completed(
 		return
 	if not credentials:
 		return
-	email = decode_access_token(credentials.credentials)
+	email = decode_access_token(credentials.credentials, allow_temporary=True)
 	if email:
 		user = db.query(User).filter(User.email == email).first()
-		if user and user.must_change_password:
+		if user and (user.must_change_password or not decode_access_token(credentials.credentials)):
 			raise HTTPException(status_code=403, detail="Change your temporary password before continuing")
 
 

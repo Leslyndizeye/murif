@@ -96,7 +96,10 @@ class ManualAccountTests(unittest.TestCase):
         })
         self.assertEqual(changed.status_code, 200)
         self.assertFalse(changed.json()['user']['must_change_password'])
-        self.assertEqual(self.client.get('/work', headers=headers).status_code, 200)
+        self.assertEqual(self.client.get('/work', headers=headers).status_code, 403)
+        self.assertEqual(self.client.get('/auth/me', headers=headers).status_code, 401)
+        new_headers = {'Authorization': 'Bearer ' + changed.json()['access_token']}
+        self.assertEqual(self.client.get('/work', headers=new_headers).status_code, 200)
         self.assertEqual(self.client.post('/auth/login', json={'email': details['email'], 'password': details['temporary_password']}).status_code, 401)
         self.assertEqual(self.client.post('/auth/login', json={'email': details['email'], 'password': 'A-new-password-123'}).status_code, 200)
 
