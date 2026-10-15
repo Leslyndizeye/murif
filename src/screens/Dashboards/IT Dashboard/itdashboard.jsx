@@ -6,7 +6,8 @@ import {
   FaFileContract,
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { documentAPI, reportAPI, voucherAPI } from '../../../services/api';
+import { assetAPI, documentAPI, reportAPI, usersAPI, voucherAPI } from '../../../services/api';
+import { getApiErrorMessage } from '../../../utils/apiError';
 import UnifiedSidebar from '../../../components/layout/UnifiedSidebar';
 import TopNavbar from '../../../components/layout/TopNavbar';
 
@@ -20,13 +21,14 @@ const ITDashboard = () => {
   const [user, setUser] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [stats, setStats] = useState({
-    // Real device/asset inventory is not built yet, so do not show demo data.
     totalAssets: 0,
     activeTickets: 0,
     resolved: 0,
     pending: 0,
   });
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [people, setPeople] = useState([]);
+  const [peopleLoading, setPeopleLoading] = useState(true);
+  const [peopleError, setPeopleError] = useState('');
   const [workloadBoard, setWorkloadBoard] = useState([]);
   const [queueSnapshot, setQueueSnapshot] = useState({
     open: 0,
@@ -100,7 +102,7 @@ const ITDashboard = () => {
     maybeNotifyUnreadIncrease(latestNotifications || []);
   }, [maybeNotifyUnreadIncrease, user?.email]);
 
-  // Check authentication on component mount (frontend-only demo mode)
+  // Read the session already checked by ProtectedRoute.
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     const storedUser = localStorage.getItem('user');
@@ -111,7 +113,6 @@ const ITDashboard = () => {
       return;
     }
 
-    // In demo mode, trust localStorage and skip backend verification
     try {
       setUser(JSON.parse(storedUser));
     } catch {
@@ -120,6 +121,33 @@ const ITDashboard = () => {
     }
   }, [navigate]);
 
+  const loadPeople = useCallback(async () => {
+    if (!user) return;
+    setPeopleLoading(true);
+    try {
+      const data = await usersAPI.listUsers();
+      setPeople(data || []);
+      setPeopleError('');
+    } catch (error) {
+      setPeopleError(getApiErrorMessage(error, 'Unable to load the employee directory.'));
+    } finally {
+      setPeopleLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadPeople();
+    const intervalId = setInterval(loadPeople, 30000);
+    window.addEventListener('asm-users-updated', loadPeople);
+    window.addEventListener('focus', loadPeople);
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('asm-users-updated', loadPeople);
+      window.removeEventListener('focus', loadPeople);
+    };
+  }, [user, loadPeople]);
+
   useEffect(() => {
     const loadDashboardData = async () => {
       if (!user) return;
@@ -127,17 +155,16 @@ const ITDashboard = () => {
       try {
         setDataError('');
 
-        const [overview, vouchers, documents] = await Promise.all([
+        const [overview, vouchers, documents, assets] = await Promise.all([
           reportAPI.getOverview(),
           voucherAPI.list(),
           documentAPI.list(),
+          assetAPI.list(),
         ]);
-
-        await reportAPI.checkSla();
-        await loadNotifications();
 
         setStats((prev) => ({
           ...prev,
+          totalAssets: (assets || []).length,
           activeTickets: (overview.open || 0) + (overview.assigned || 0) + (overview.in_progress || 0),
           resolved: overview.resolved || 0,
           pending: overview.open || 0,
@@ -179,16 +206,11 @@ const ITDashboard = () => {
           signedReturned: signedReturned.length,
         });
 
-        const recent = vouchers.slice(0, 8).map((item) => ({
-          id: item.id,
-          title: `${item.ticket_number} • ${item.title}`,
-          time: new Date(item.updated_at).toLocaleString(),
-          icon: <FaTicketAlt />,
-        }));
-
-        setRecentActivity(recent);
+        // Notification failures must not prevent the inventory and queue from updating.
+        await reportAPI.checkSla();
+        await loadNotifications();
       } catch (error) {
-        setDataError(error?.response?.data?.detail || 'Failed to load dashboard data');
+        setDataError(getApiErrorMessage(error, 'Failed to load dashboard data'));
       }
     };
 
@@ -256,6 +278,10 @@ const ITDashboard = () => {
   };
 
   const unreadNotifications = notifications.filter((item) => !item.is_read);
+  const activePeople = people.filter((person) => person.is_active);
+  const inactivePeopleCount = people.length - activePeople.length;
+  const activeITCount = activePeople.filter((person) => (person.role || '').toLowerCase() === 'it').length;
+  const totalActiveTickets = workloadBoard.reduce((total, item) => total + item.active_tickets, 0);
 
   // If user is not authenticated (should have redirected already)
   if (!user) {
@@ -402,22 +428,48 @@ const ITDashboard = () => {
                 </section>
 
                 <section className="it-glass-card it-team-card">
-                  <div className="it-panel-heading"><div><span className="it-card-kicker">Team capacity</span><h2>Employee workload</h2></div><button type="button" onClick={() => navigate('/report')}>View report</button></div>
+                  <div className="it-panel-heading"><div><span className="it-card-kicker">Team capacity</span><h2>IT workload</h2></div><button type="button" onClick={() => navigate('/report')}>View report</button></div>
                   <div className="it-team-list">
                     {workloadBoard.length === 0 && <p className="it-empty-state">No active IT personnel detected.</p>}
-                    {workloadBoard.map((member, index) => <div className="it-team-row" key={member.user_id}><span className="it-avatar">{(member.email || 'IT').slice(0, 2).toUpperCase()}</span><div className="it-team-person"><strong>{member.email}</strong><span>IT Personnel #{member.user_id}</span></div><div className="it-team-load"><span>{member.active_tickets} active</span><div><i style={{ width: `${Math.min(member.active_tickets * 12 + 12, 100)}%` }} /></div></div><span className="it-rank">0{index + 1}</span></div>)}
+                    {workloadBoard.map((member, index) => {
+                      const person = people.find((item) => item.id === member.user_id);
+                      const name = person?.full_name || person?.username || member.email;
+                      return <div className="it-team-row" key={member.user_id}><span className="it-avatar">{(name || 'IT').slice(0, 2).toUpperCase()}</span><div className="it-team-person"><strong>{name}</strong><span>{member.email}</span></div><div className="it-team-load"><span>{member.active_tickets} active</span><div><i style={{ width: `${totalActiveTickets ? (member.active_tickets / totalActiveTickets) * 100 : 0}%` }} /></div></div><span className="it-rank">{String(index + 1).padStart(2, '0')}</span></div>;
+                    })}
                   </div>
                 </section>
 
                 <section className="it-glass-card it-employee-table-card">
-                  <div className="it-panel-heading"><div><span className="it-card-kicker">Service desk</span><h2>Employee activity</h2></div><button type="button" onClick={() => navigate('/voucher')}>Open tickets</button></div>
-                  <div className="it-employee-table-wrap"><table className="it-employee-table"><thead><tr><th>Employee</th><th>Latest activity</th><th>State</th><th>Action</th></tr></thead><tbody>{recentActivity.slice(0, 5).map((item) => <tr key={item.id}><td><span className="it-table-avatar">{item.title.slice(0, 2)}</span><strong>{item.title}</strong></td><td>{item.time}</td><td><span className="it-state-pill">Active</span></td><td><button type="button" onClick={() => navigate(`/voucher?ticket=${encodeURIComponent(item.title.split(' • ')[0])}`)}>Review</button></td></tr>)}</tbody></table>{recentActivity.length === 0 && <p className="it-empty-state">No ticket activity yet.</p>}</div>
+                  <div className="it-panel-heading"><div><span className="it-card-kicker">People</span><h2>Employee directory</h2></div><button type="button" onClick={loadPeople} disabled={peopleLoading}>{peopleLoading ? 'Refreshing...' : 'Refresh people'}</button></div>
+                  {peopleError && <p className="it-glass-error" role="alert">{peopleError}</p>}
+                  <div className="it-employee-table-wrap">
+                    <table className="it-employee-table" aria-label="Employee directory" aria-busy={peopleLoading}>
+                      <thead><tr><th>Employee</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+                      <tbody>{people.map((person) => {
+                        const name = person.full_name || person.username || person.email;
+                        return <tr key={person.id}>
+                          <td><span className="it-table-avatar">{(name || 'U').slice(0, 2).toUpperCase()}</span><strong>{name}</strong></td>
+                          <td>{person.email}</td><td>{person.role || 'USER'}</td>
+                          <td><span className={`it-state-pill${person.is_active ? '' : ' it-state-pill-inactive'}`}>{person.is_active ? 'Active' : 'Inactive'}</span></td>
+                        </tr>;
+                      })}</tbody>
+                    </table>
+                    {peopleLoading && people.length === 0 && <p className="it-empty-state" role="status">Loading people...</p>}
+                    {!peopleLoading && !peopleError && people.length === 0 && <p className="it-empty-state">No employee accounts yet. Grant access in Settings to add a person.</p>}
+                  </div>
                 </section>
               </main>
 
               <aside className="it-glass-right-rail">
                 <section className="it-glass-card it-meeting-card"><div className="it-panel-heading"><div><span className="it-card-kicker">Next up</span><h2>Upcoming work</h2></div><FaBell aria-hidden="true" /></div><div className="it-meeting-time">{documentQueue.pendingSignatures > 0 ? 'Action needed' : 'All clear'}</div><p>{documentQueue.pendingSignatures > 0 ? `${documentQueue.pendingSignatures} document${documentQueue.pendingSignatures === 1 ? '' : 's'} waiting for a user signature.` : 'No pending document signatures right now.'}</p><button type="button" onClick={() => navigate('/document')}>Open document queue <span>→</span></button></section>
-                <section className="it-glass-card it-format-card"><div className="it-panel-heading"><div><span className="it-card-kicker">Work modes</span><h2>Working format</h2></div></div><div className="it-format-stack"><div><span>On site</span><strong>{Math.max(workloadBoard.length - 1, 0)}</strong></div><div><span>Remote</span><strong>1</strong></div><div><span>Available</span><strong>{queueSnapshot.open}</strong></div></div><div className="it-format-bar"><span style={{ width: `${workloadBoard.length ? 68 : 0}%` }} /><span style={{ width: `${workloadBoard.length ? 22 : 0}%` }} /><span style={{ width: `${workloadBoard.length ? 10 : 0}%` }} /></div><div className="it-format-legend"><span>On site</span><span>Remote</span><span>Available</span></div></section>
+                <section className="it-glass-card it-format-card" aria-label="Account overview">
+                  <div className="it-panel-heading"><div><span className="it-card-kicker">People</span><h2>Account overview</h2></div></div>
+                  {peopleError ? <p className="it-empty-state">Account counts are unavailable.</p> : <>
+                    <div className="it-format-stack"><div><span>Total accounts</span><strong>{peopleLoading ? '…' : people.length}</strong></div><div><span>Active accounts</span><strong>{peopleLoading ? '…' : activePeople.length}</strong></div><div><span>Active IT staff</span><strong>{peopleLoading ? '…' : activeITCount}</strong></div></div>
+                    <div className="it-format-bar"><span style={{ width: `${people.length ? (activePeople.length / people.length) * 100 : 0}%` }} /><span style={{ width: `${people.length ? (inactivePeopleCount / people.length) * 100 : 0}%` }} /></div>
+                    <div className="it-format-legend"><span>Active</span><span>Inactive</span></div>
+                  </>}
+                </section>
                 <section className="it-glass-card it-doc-card"><span className="it-card-kicker">Document flow</span><h2>{documentQueue.receiving}</h2><p>receiving documents in the workflow</p><div className="it-doc-stats"><span><strong>{documentQueue.signedReturned}</strong> returned</span><span><strong>{documentQueue.pendingSignatures}</strong> pending</span></div></section>
               </aside>
             </div>

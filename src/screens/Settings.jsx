@@ -4,24 +4,26 @@ import UnifiedSidebar from '../components/layout/UnifiedSidebar';
 import TopNavbar from '../components/layout/TopNavbar';
 import { departmentAPI, stationAPI, usersAPI } from '../services/api';
 import { optionsWithFallback } from '../utils/lookupOptions';
+import { getApiErrorMessage } from '../utils/apiError';
 import { Checkbox } from '../components/ui/checkbox';
 import { Button } from '../components/ui/button';
 import { Check } from 'lucide-react';
 
+const EMPTY_MEMBER_FORM = {
+  firstName: '', lastName: '', username: '', email: '', station: '', department: '', role: 'USER',
+};
+
 const Settings = () => {
   const location = useLocation();
 
-  const [currentRole, setCurrentRole] = useState('');
+  const [currentRole, setCurrentRole] = useState(null);
   const [accountInfo, setAccountInfo] = useState({
-    username: 'username',
-    email: 'username@rab.gov.rw',
-    firstName: '',
-    lastName: '',
-    grantUsername: '',
-    station: '',
-    department: '',
-    role: 'USER',
+    username: '',
+    email: '',
   });
+  const [memberForm, setMemberForm] = useState(EMPTY_MEMBER_FORM);
+  const [grantingAccess, setGrantingAccess] = useState(false);
+  const [grantFeedback, setGrantFeedback] = useState({ form: '', text: '', type: '' });
   const [passwordInfo, setPasswordInfo] = useState({
     password: '',
     confirmPassword: '',
@@ -45,6 +47,7 @@ const Settings = () => {
   const [quickAccessForm, setQuickAccessForm] = useState({
     email: '',
     username: '',
+    role: 'USER',
   });
   const [departments, setDepartments] = useState([]);
   const [stations, setStations] = useState([]);
@@ -81,7 +84,7 @@ const Settings = () => {
   }, []);
 
   const isITRole = useMemo(() => ['admin', 'manager', 'it'].includes(currentRole), [currentRole]);
-  const canGrantAccess = isITRole;
+  const canGrantAccess = ['admin', 'it'].includes(currentRole);
 
   const clearStatusAfterDelay = () => {
     setTimeout(() => setStatusMessage({ text: '', type: '' }), 3000);
@@ -125,89 +128,72 @@ const Settings = () => {
   };
 
   const handleGrantAccess = async () => {
-    if (!canGrantAccess) {
-      setStatusMessage({ text: 'Only IT personnel can grant access.', type: 'error' });
-      clearStatusAfterDelay();
+    if (!canGrantAccess || grantingAccess) return;
+    const email = memberForm.email.trim().toLowerCase();
+    const username = memberForm.username.trim().toLowerCase();
+    const fullName = `${memberForm.firstName.trim()} ${memberForm.lastName.trim()}`;
+    if (!memberForm.firstName.trim() || !memberForm.lastName.trim() || !email || !username) {
+      setGrantFeedback({ form: 'member', text: 'First name, last name, username, and email are required.', type: 'error' });
       return;
     }
 
-    const fullName = `${accountInfo.firstName || ''} ${accountInfo.lastName || ''}`.trim();
-    if (!fullName || !accountInfo.email || !accountInfo.grantUsername) {
-      setStatusMessage({ text: 'First name, last name, username, and email are required.', type: 'error' });
-      clearStatusAfterDelay();
-      return;
-    }
-
-    const usernameBase = `${accountInfo.firstName || ''}.${accountInfo.lastName || ''}`
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[^a-z0-9.]/g, '');
-    const generatedUsername = (accountInfo.grantUsername || usernameBase || accountInfo.email.split('@')[0])
-      .toLowerCase()
-      .trim();
-
+    setGrantingAccess(true);
+    setGrantFeedback({ form: 'member', text: '', type: '' });
     try {
       await usersAPI.createUser({
-        email: accountInfo.email,
-        role: (accountInfo.role || 'USER').toUpperCase(),
-        username: generatedUsername,
+        email,
+        role: memberForm.role,
+        username,
         full_name: fullName,
-        department: accountInfo.department || null,
-        station: accountInfo.station || null,
+        department: memberForm.department || null,
+        station: memberForm.station || null,
       });
 
-      setStatusMessage({ text: 'User access granted. Login details were emailed to them.', type: 'success' });
+      setGrantFeedback({ form: 'member', text: 'User access granted. Login details were emailed to them.', type: 'success' });
       window.dispatchEvent(new Event('asm-users-updated'));
-      setAccountInfo((prev) => ({
-        ...prev,
-        firstName: '',
-        lastName: '',
-        grantUsername: '',
-        station: '',
-        department: '',
-        role: 'USER',
-      }));
+      setMemberForm(EMPTY_MEMBER_FORM);
     } catch (error) {
-      setStatusMessage({ text: error?.response?.data?.detail || 'Failed to grant user access.', type: 'error' });
+      setGrantFeedback({ form: 'member', text: getApiErrorMessage(error, 'Failed to grant user access.'), type: 'error' });
+    } finally {
+      setGrantingAccess(false);
     }
-
-    clearStatusAfterDelay();
   };
 
   const handleQuickGrantAccess = async () => {
-    if (!canGrantAccess) {
+    if (!canGrantAccess || grantingAccess) {
       return;
     }
 
     const normalizedEmail = (quickAccessForm.email || '').trim().toLowerCase();
     const normalizedUsername = (quickAccessForm.username || '').trim().toLowerCase();
     if (!normalizedEmail || !normalizedUsername) {
-      setStatusMessage({ text: 'Email and username are required.', type: 'error' });
-      clearStatusAfterDelay();
+      setGrantFeedback({ form: 'quick', text: 'Email and username are required.', type: 'error' });
       return;
     }
 
+    setGrantingAccess(true);
+    setGrantFeedback({ form: 'quick', text: '', type: '' });
     try {
       await usersAPI.createUser({
         username: normalizedUsername,
         email: normalizedEmail,
-        role: 'USER',
+        role: quickAccessForm.role,
         full_name: normalizedUsername,
         department: null,
         station: null,
       });
 
-      setQuickAccessForm({ email: '', username: '' });
-      setStatusMessage({ text: 'User access granted. Login details were emailed to them.', type: 'success' });
+      setQuickAccessForm({ email: '', username: '', role: 'USER' });
+      setGrantFeedback({ form: 'quick', text: 'User access granted. Login details were emailed to them.', type: 'success' });
       window.dispatchEvent(new Event('asm-users-updated'));
     } catch (error) {
-      setStatusMessage({ text: error?.response?.data?.detail || 'Failed to grant user access.', type: 'error' });
+      setGrantFeedback({ form: 'quick', text: getApiErrorMessage(error, 'Failed to grant user access.'), type: 'error' });
+    } finally {
+      setGrantingAccess(false);
     }
-
-    clearStatusAfterDelay();
   };
 
-  if (isITSettingsPage && !isITRole) {
+  if (isITSettingsPage && currentRole !== null && !isITRole) {
     return <Navigate to="/settings" replace />;
   }
 
@@ -222,7 +208,7 @@ const Settings = () => {
           <h1 className="setting-title">{isITRole ? 'IT Settings' : 'Settings'}</h1>
         </div>
 
-        {statusMessage.text && <div className={`status-message ${statusMessage.type}`}>{statusMessage.text}</div>}
+        {statusMessage.text && <div className={`status-message ${statusMessage.type}`} role={statusMessage.type === 'error' ? 'alert' : 'status'}>{statusMessage.text}</div>}
 
         <div className="setting-section">
           <h2 className="section-title">Account Information</h2>
@@ -286,23 +272,25 @@ const Settings = () => {
         </div>
 
         {canGrantAccess && (
-          <div className="setting-section">
-            <h2 className="section-title"> User Access Grant</h2>
+          <div className="setting-section" role="region" aria-labelledby="quick-grant-title">
+            <h2 className="section-title" id="quick-grant-title">User Access Grant</h2>
 
             <div className="form-group">
-              <label className="form-label">Email</label>
+              <label className="form-label" htmlFor="grant-email">Email</label>
               <input
+                id="grant-email"
                 type="email"
                 className="form-input"
                 value={quickAccessForm.email}
                 onChange={(e) => setQuickAccessForm((prev) => ({ ...prev, email: e.target.value }))}
-                placeholder="e.g. alice.n@rab.gov.rw"
+                placeholder="e.g. alice.n@icttoolsasm.com"
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Username</label>
+              <label className="form-label" htmlFor="grant-username">Username</label>
               <input
+                id="grant-username"
                 type="text"
                 className="form-input"
                 value={quickAccessForm.username}
@@ -311,55 +299,67 @@ const Settings = () => {
               />
             </div>
 
-            <p className="field-hint">A temporary password will be generated and emailed to this address.</p>
+            <div className="form-group">
+              <label className="form-label" htmlFor="grant-role">Role</label>
+              <select id="grant-role" className="form-input" value={quickAccessForm.role} onChange={(e) => setQuickAccessForm((prev) => ({ ...prev, role: e.target.value }))}>
+                <option value="USER">User</option>
+                <option value="IT">IT</option>
+              </select>
+            </div>
+            <p className="field-hint">Use an @icttoolsasm.com address. A temporary password will be emailed to this person. Active IT accounts also appear in IT workload.</p>
 
-            <button className="save-btn" onClick={handleQuickGrantAccess} type="button">
-              Grant Access
+            <button className="save-btn" onClick={handleQuickGrantAccess} type="button" disabled={grantingAccess}>
+              {grantingAccess ? 'Granting access...' : 'Grant Access'}
             </button>
+            {grantFeedback.form === 'quick' && grantFeedback.text && <p className={`status-message ${grantFeedback.type}`} role={grantFeedback.type === 'error' ? 'alert' : 'status'}>{grantFeedback.text}</p>}
           </div>
         )}
 
-        {isITSettingsPage && (
-          <div className="setting-section">
-            <h2 className="section-title">Member Access</h2>
+        {isITSettingsPage && canGrantAccess && (
+          <div className="setting-section" role="region" aria-labelledby="member-grant-title">
+            <h2 className="section-title" id="member-grant-title">Member Access</h2>
 
             <div className="form-group">
-              <label className="form-label">First Name</label>
+              <label className="form-label" htmlFor="member-first-name">First Name</label>
               <input
+                id="member-first-name"
                 type="text"
                 className="form-input"
-                value={accountInfo.firstName}
-                onChange={(e) => setAccountInfo({ ...accountInfo, firstName: e.target.value })}
+                value={memberForm.firstName}
+                onChange={(e) => setMemberForm({ ...memberForm, firstName: e.target.value })}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Last Name</label>
+              <label className="form-label" htmlFor="member-last-name">Last Name</label>
               <input
+                id="member-last-name"
                 type="text"
                 className="form-input"
-                value={accountInfo.lastName}
-                onChange={(e) => setAccountInfo({ ...accountInfo, lastName: e.target.value })}
+                value={memberForm.lastName}
+                onChange={(e) => setMemberForm({ ...memberForm, lastName: e.target.value })}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Email</label>
+              <label className="form-label" htmlFor="member-email">Email</label>
               <input
+                id="member-email"
                 type="email"
                 className="form-input"
-                value={accountInfo.email}
-                onChange={(e) => setAccountInfo({ ...accountInfo, email: e.target.value })}
+                value={memberForm.email}
+                onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Username</label>
+              <label className="form-label" htmlFor="member-username">Username</label>
               <input
+                id="member-username"
                 type="text"
                 className="form-input"
-                value={accountInfo.grantUsername || ''}
-                onChange={(e) => setAccountInfo({ ...accountInfo, grantUsername: e.target.value })}
+                value={memberForm.username}
+                onChange={(e) => setMemberForm({ ...memberForm, username: e.target.value })}
                 placeholder="e.g. jane.doe"
               />
             </div>
@@ -370,11 +370,11 @@ const Settings = () => {
               <label className="form-label">Station</label>
               <select
                 className="form-input"
-                value={accountInfo.station}
-                onChange={(e) => setAccountInfo({ ...accountInfo, station: e.target.value })}
+                value={memberForm.station}
+                onChange={(e) => setMemberForm({ ...memberForm, station: e.target.value })}
               >
                 <option value="">Select station</option>
-                {optionsWithFallback(stations, accountInfo.station).map((station) => (
+                {optionsWithFallback(stations, memberForm.station).map((station) => (
                   <option key={station.id} value={station.name}>{station.name}</option>
                 ))}
               </select>
@@ -384,11 +384,11 @@ const Settings = () => {
               <label className="form-label">Department</label>
               <select
                 className="form-input"
-                value={accountInfo.department}
-                onChange={(e) => setAccountInfo({ ...accountInfo, department: e.target.value })}
+                value={memberForm.department}
+                onChange={(e) => setMemberForm({ ...memberForm, department: e.target.value })}
               >
                 <option value="">Select department</option>
-                {optionsWithFallback(departments, accountInfo.department).map((department) => (
+                {optionsWithFallback(departments, memberForm.department).map((department) => (
                   <option key={department.id} value={department.name}>{department.name}</option>
                 ))}
               </select>
@@ -398,17 +398,18 @@ const Settings = () => {
               <label className="form-label">Role</label>
               <select
                 className="form-input"
-                value={accountInfo.role}
-                onChange={(e) => setAccountInfo({ ...accountInfo, role: e.target.value })}
+                value={memberForm.role}
+                onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })}
               >
                 <option value="USER">User</option>
                 <option value="IT">IT</option>
               </select>
             </div>
 
-            <button className="save-btn" onClick={handleGrantAccess} type="button">
-              Access Granted
+            <button className="save-btn" onClick={handleGrantAccess} type="button" disabled={grantingAccess}>
+              {grantingAccess ? 'Granting access...' : 'Grant Member Access'}
             </button>
+            {grantFeedback.form === 'member' && grantFeedback.text && <p className={`status-message ${grantFeedback.type}`} role={grantFeedback.type === 'error' ? 'alert' : 'status'}>{grantFeedback.text}</p>}
           </div>
         )}
 
